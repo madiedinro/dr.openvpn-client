@@ -1,0 +1,7 @@
+---
+openvpnc_user: openvpn
+openvpnc_group: openvpn
+openvpnc_service: openvpn
+openvpnc_version: 2.4
+openvpnc_name: client
+openvpnc_key: 'keys/{{ user_cert|default(inventory_hostname) }}.ovpn'

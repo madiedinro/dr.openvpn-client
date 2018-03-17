@@ -1,0 +1,48 @@
+
+- name: Add OpenVPN repo GPG key
+  apt_key:
+    url: https://swupdate.openvpn.net/repos/repo-public.gpg
+    key: E158C569
+    state: present
+
+
+- uri:
+    url: http://build.openvpn.net/debian/openvpn/release/{{ openvpnc_version }}/dists/{{ ansible_lsb.codename }}/
+    return_content: yes
+  register: build_exists
+  ignore_errors: yes
+
+
+- name: Add alternative OpenVPN repo sources
+  apt_repository:
+    filename: openvpn-aptrepo
+    repo: deb http://build.openvpn.net/debian/openvpn/release/{{ openvpnc_version }} {{ ansible_lsb.codename }} main
+    state: present
+  when: build_exists.status == 200
+
+
+- name: Install OpenVPN
+  apt: name={{item}} update_cache=yes
+  with_items: ['openvpn']
+
+
+- name: Copying configuration
+  copy:
+    src: '{{openvpnc_key}}'
+    dest: '/etc/openvpn/{{ openvpnc_name }}.conf'
+  tags: ['ovpn_user']
+
+- name: Set OpenVPN client to start on reboot
+  lineinfile: dest="/etc/default/openvpn" regexp={{ item.needle }} line={{ item.line }}
+  with_items:
+    - { needle: '#AUTOSTART="all"', line: 'AUTOSTART="all"' }
+  tags: ['ovpn_service']
+
+
+- name: Starting/restarting OpenVPN client
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+    name: '{{ openvpnc_service }}@{{ openvpnc_name }}'
+  tags: ['ovpn_service']
