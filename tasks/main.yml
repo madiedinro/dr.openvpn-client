@@ -32,17 +32,30 @@
     dest: '/etc/openvpn/{{ openvpnc_name }}.conf'
   tags: ['ovpn_user']
 
+# - meta: flush_handlers
+
 - name: Set OpenVPN client to start on reboot
   lineinfile: dest="/etc/default/openvpn" regexp={{ item.needle }} line={{ item.line }}
   with_items:
     - { needle: '#AUTOSTART="all"', line: 'AUTOSTART="all"' }
+  # notify: start/restart openclient
   tags: ['ovpn_service']
 
+- block:
+    - service:
+        name: "{{openvpnc_service}}"
+        state: restarted
+        enabled: yes
+      when: ansible_service_mgr == 'upstart'
+    - systemd:
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
+        name: '{{ openvpnc_service }}@{{ openvpnc_name }}'
+      when: ansible_service_mgr == 'systemd'
 
-- name: Starting/restarting OpenVPN client
-  systemd:
-    state: restarted
-    daemon_reload: yes
-    enabled: yes
-    name: '{{ openvpnc_service }}@{{ openvpnc_name }}'
-  tags: ['ovpn_service']
+
+
+
+
+
